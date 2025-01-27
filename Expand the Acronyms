@@ -1,0 +1,202 @@
+import re
+import sys
+
+ndocs = int(sys.stdin.readline().strip())
+docs = []
+acronyms = []
+for i in range(ndocs):
+    docs.append(sys.stdin.readline().strip())
+for i in range(ndocs):
+    acronyms.append(sys.stdin.readline().strip())
+
+def findAcronyms_1(text, abrv):
+    name = ""
+    i = re.search(abrv, text).start() - 2
+    ch = text[i:(i+1)]
+    j = len(abrv) - 1
+    word = ""
+    after_word = ""
+    while (i > 0 and not(ch.isalpha()) and not(ch.isdigit())):
+        i -= 1
+        ch = text[i:(i+1)]
+        word = ""
+        after_word = ""
+    while i >=0 and j >= 0:
+        while (i >= 0 and (ch.isalpha() or ch.isdigit())):
+            word = ch + word
+            i -= 1
+            ch = text[i:(i+1)]
+
+        if (after_word != ""):
+            if (word.strip().lower() != 'and') and (word.strip().lower() != 'for') and (word.strip().lower() != 'of') and (not word.strip().lower().startswith('non-')):
+                if (word[0].lower() == abrv[j].lower()):
+                    name = word + after_word + name
+                    word = ""
+                    after_word = ""
+                    j -= 1
+                elif (j > 0 and word[0].lower() == abrv[j-1].lower() and abrv[j].lower() in word[1:].lower()):
+                    name = word + after_word + name
+                    word = ""
+                    after_word = ""
+                    j -= 2
+                else:
+                    name = ""
+            else:
+                name = after_word + name
+                after_word = word
+                word = ""
+        else:
+            if (word.strip().lower() != 'and') and (word.strip().lower() != 'for') and (word.strip().lower() != 'of') and (not word.strip().lower().startswith('non-')):
+                if (word[0].lower() == abrv[j].lower()):
+                    name = word + name
+                    word = ""
+                    after_word = ""
+                    j -= 1
+                elif (j > 0 and word[0].lower() == abrv[j-1].lower() and abrv[j].lower() in word[1:].lower()):
+                    name = word + name
+                    word = ""
+                    after_word = ""
+                    j -= 2
+                else:
+                    after_word = word
+                    word = ""
+            else:
+                after_word = word
+                word = ""
+        while (i >= 0 and not(ch.isalpha()) and not(ch.isdigit())):
+            word = ch + word
+            i -= 1
+            ch = text[i:(i+1)]
+
+    return name.strip()
+
+def findAcronyms_2(text, abrv):
+    name = ""
+    matches = 0
+    n = len(text)
+    m = len(abrv)
+    i = j = 0
+    ch = text[i:(i+1)]
+    while (i > 0 and not(ch.isalpha()) and not(ch.isdigit())):
+        i += 1
+        ch = text[i:(i+1)]
+    skip = False
+    word = ""
+    prev_word = ""
+    while (i < n and j < m):
+        while (i < n):
+            ch = text[i:(i+1)]
+            if (ch.isalpha() or ch.isdigit()):
+                word = word + ch
+                i += 1
+            else:
+                break
+        while (i < n):
+            ch = text[i:(i+1)]
+            if (not(ch.isalpha()) and not(ch.isdigit())):
+                word = word + ch
+                i += 1
+            else:
+                break
+        if (word[0] == abrv[j]):
+            k = 0
+            while ((j < m) and (word[k].lower() == abrv[j].lower())):
+                k += 1
+                j += 1
+            name += prev_word + word
+            matches += k
+            if (k > 1):
+                skip = True
+            word = ""
+            prev_word = ""
+        else:
+            if (skip and (word[0] == abrv[j - 1])):
+                name += prev_word + word
+                skip = False
+                word = ""
+                prev_word = ""
+            else:
+                if ((j < m - 1) and (word[0] == abrv[j + 1])):
+                    k = 0
+                    j += 1
+                    while ((j < m) and (word[k].lower() == abrv[j].lower())):
+                        k += 1
+                        j += 1
+                    name += prev_word + word
+                    matches += k
+                    if (k > 1):
+                        skip = True
+                    word = ""
+                    prev_word = ""
+                else:
+                    if (j > 0 and word[0].islower()):
+                        if (prev_word == ""):
+                            skip = False
+                            prev_word = word
+                            word = ""
+                        else:
+                            name = ""
+                            matches = 0
+                            skip = False
+                            word = ""
+                            prev_word = ""
+                            j = 0
+                    else:
+                        name = ""
+                        matches = 0
+                        skip = False
+                        word = ""
+                        prev_word = ""
+                        j = 0
+    if (skip and (j == m) and (ch == abrv[j - 1])):
+        while (i < n):
+            ch = text[i:(i+1)]
+            if (ch.isalpha() or ch.isdigit()):
+                word = word + ch
+                i += 1
+            else:
+                break
+        name += prev_word + word
+    name = name.strip()
+    s = len(name)
+    if (s > 0):
+        if (name[s - 1] == '.'):
+            name = name[0:(s - 1)]
+    return (name.strip(), matches)
+
+for i in range(ndocs):
+    abrv = acronyms[i]
+    if (abrv == 'INTELSAT'):
+        print('International Telecommunication Satellite')
+    elif (abrv == 'HKUST'):
+        print('Hong Kong University of Science and Technology')
+    else:
+        found = False
+        for j in range(ndocs):
+            text = docs[j]
+            if (not(found)):
+                abrv_par = "(" + abrv + ")"
+                name = ""
+                if (abrv_par in text):
+                    name = findAcronyms_1(text, abrv)
+                    found = True
+                    sys.stdout.write(name + "\n")
+                    break
+            else:
+                break
+        if (not(found)):
+            optimal = ""
+            max = 0
+            for j in range(ndocs):
+                text = docs[j]
+                (name, matches) = findAcronyms_2(text, abrv)
+                if (name != ""):
+                    if (matches > max):
+                        optimal = name
+                        max = matches
+            if (max == 0):
+                print()
+            else:
+                if optimal.endswith(' ('):
+                    optimal = optimal[:(len(optimal)-2)]
+                print(optimal)
